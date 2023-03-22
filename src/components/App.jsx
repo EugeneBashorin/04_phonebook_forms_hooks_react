@@ -1,94 +1,91 @@
 import { Component } from "react";
+import {useState, useEffect} from "react";
 import PropTypes from "prop-types";
 import { ContactForm  } from "./ContactForm/ContactForm.jsx";
 import { ContactList } from "./ContactList/ContactList";
 import { FilterComponent } from "./FilterComponent/FilterComponent";
 import { nanoid } from 'nanoid';
 import {SectionBlock} from "./App.styled.jsx"
+//was 96 strings
+export function App(){
 
-const INITIAL_STATE = {
-  contacts: [ ],
-  filter:"",
-  favorites: false,
-}
-
-export class App extends Component {
-  state = {...INITIAL_STATE}
-
-  formSubmitHandler = data =>{
-    if(!this.state.contacts.find(contact => contact.name.toLowerCase() === data.name.toLowerCase())){
-      this.setState(prevState =>{
-        return{
-          contacts: [{id: nanoid(), name: data.name, phoneNumber: data.phoneNumber, favorites: data.favorites}, ...prevState.contacts]
-        }
-      }) 
-    }else{
-      alert(`${data.name} is already in contacts.`)
-      return;
-   }
-  }
-
-  changeFilter = event => {
-    this.setState( 
-      event.target.name === "favorites" ? {favorites: event.currentTarget.checked}
-      : {filter: event.currentTarget.value}
-      )
-  }
-
-  deleteContact = idContact => {
-    this.setState( prevState => {
-        return{
-          contacts: prevState.contacts.filter(contact => contact.id !== idContact)
-        }
-      }
-    )
-  }
-  unFavorite = (idContact, boolState) => {
-    this.setState(prevState =>{
-      return{
-        contact: prevState.contacts.map(contact => {if(contact.id === idContact) contact.favorites = !boolState})
-      }
-    })
-
-  }
-  componentDidMount() {
+  const [contacts, setContacts] = useState(
+    JSON.parse(window.localStorage.getItem('contacts'))??[]
+  );
+  const [filterField, setFilterField] = useState("");
+  const [favorites, setFavorites] = useState(false);
+  //DidMount
+  useEffect(() => {
     const tempContacts = localStorage.getItem("contacts");
     const parsedContacts = JSON.parse(tempContacts);
-    if(parsedContacts){
-      this.setState({contacts: parsedContacts})
+    if(!parsedContacts){
+      return;
     }
-  }
-
-  componentDidUpdate(prevProps, prevState, snapshot) {
-    if(this.state !== prevState){
-      try { 
-        localStorage.setItem("contacts", JSON.stringify(this.state.contacts))
+    setContacts(parsedContacts);
+  },[]);  
+  //DidUpdate
+  useEffect(()=>{
+     try { 
+        localStorage.setItem("contacts", JSON.stringify(contacts))
       } catch (error) {
         console.log("Something go wrong with set to localStorage: ",error.message)
       }
+  },[contacts, favorites]);
+
+  const formSubmitHandler = data => {
+    if(contacts.find(contact => contact.name.toLowerCase() === data.name.toLowerCase())){
+      alert(`${data.name} is already in contacts.`)
+      return;
+    }
+    setContacts((prevState) => ([{id: nanoid(), name: data.name, phoneNumber: data.phoneNumber, favorites: data.favorites}, ...prevState]))
+  }
+
+  const showFilteredList = (event) =>{
+    switch(event.target.name){
+      case "favorites":
+        setFavorites(event.currentTarget.checked);
+        break;
+      case "filter":
+        setFilterField(event.currentTarget.value);
+        break;
+      default:
+        return;    
     }
   }
 
-  render (){
-    const normalizeFilter = this.state.filter.toLowerCase();
-    const filteredData = this.state.favorites===false ? 
-                         this.state.contacts.filter(contact => contact.name.toLowerCase().includes(normalizeFilter))
-                          : this.state.contacts.filter(contact => contact.favorites === true && contact.name.toLowerCase().includes(normalizeFilter));
-    return (
+  const deleteContact = idContact => {
+     setContacts((prevState)=>prevState.filter(contact => contact.id !== idContact))   
+  }
+
+  const editFavoriteStatus = (idContact, boolState) => {
+    setContacts(prevState => 
+      prevState.map(contactData =>
+        contactData.id === idContact
+        ?{...contactData, favorites : !boolState}
+        : contactData
+        )
+      )
+    }
+
+  const normalizeFilter = filterField.toLowerCase();
+  let filteredContactsArr = favorites === false
+    ? contacts.filter(contact => contact.name.toLowerCase().includes(normalizeFilter))
+    : contacts.filter(contact => contact.favorites === true && contact.name.toLowerCase().includes(normalizeFilter))
+
+  return(
       <>
         <SectionBlock>
         <h1>Phonebook</h1>
-        <ContactForm onSubmitProps={this.formSubmitHandler}/>
+        <ContactForm onSubmitProps={formSubmitHandler}/>
         </SectionBlock>
         <SectionBlock>
         <h2>Contacts</h2>
-        <FilterComponent value={this.state.filter} checked={this.state.favorites} onChange={this.changeFilter}/>
-        <ContactList nameList={filteredData} onDeleteContact={this.deleteContact} unFavorContact={this.unFavorite}/>
+        <FilterComponent value={filterField} checked={favorites} onChange={showFilteredList}/>
+        <ContactList nameList={filteredContactsArr} onDeleteContact={deleteContact} editFavorContact={editFavoriteStatus}/>
         </SectionBlock>
       </>
-    )
-  }
-};
+  );
+}
 
 App.propTypes = {
   contacts: PropTypes.array,

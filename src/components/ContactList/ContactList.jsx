@@ -4,7 +4,7 @@ import {ReactComponent as FvrSvgWht} from '../heart-white.svg'
 import React from "react";
 import {ListElement, ListItem, Button, BtnWrapper} from "./ContactList.styled.jsx"
 
-export const ContactList = ({nameList, onDeleteContact, unFavorContact}) => {
+export const ContactList = ({nameList, onDeleteContact, editFavorContact}) => {
     return (
         <ListElement>
             {nameList.map( contact => (
@@ -12,7 +12,7 @@ export const ContactList = ({nameList, onDeleteContact, unFavorContact}) => {
                     {contact.name}: {contact.phoneNumber} 
                     <BtnWrapper>
                         {contact.favorites===true?<FvrSvgRed/>:<FvrSvgWht/>}
-                        <input type="checkbox" checked={contact.favorites} onChange={() => unFavorContact(contact.id, contact.favorites)}/>
+                        <input type="checkbox" checked={contact.favorites} onChange={() => editFavorContact(contact.id, contact.favorites)}/>
                         <Button type="button" onClick={()=> onDeleteContact(contact.id)}>Delete</Button>
                     </BtnWrapper>
                 </ListItem>
